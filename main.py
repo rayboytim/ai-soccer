@@ -32,7 +32,7 @@ timer = 5 # both ai have 30 seconds to score, if not they both lose
 lastTick = pygame.time.get_ticks()
 
 # nn stats
-gameNum = -1 # how many times has the simulation ran
+gameNum = 0 # how many times has the simulation ran
 genNum = 0 # what generation are we in
 
 agentsPerGen = 20 # also the number of games per generation
