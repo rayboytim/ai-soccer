@@ -62,6 +62,12 @@ class Player(Entity):
         # per-game stats
         self.ballKicks = 0
 
+        # last position per second
+        if team == "red":
+            self.lastPos = Vector2(540,360)
+        elif team == "blue":
+            self.lastPos = Vector2(740,360)
+
         # brain
         layers = [9,12,8,1]
         self.nn = NN(layers)

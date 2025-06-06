@@ -31,6 +31,9 @@ blueScore = 0
 timer = 5 # both ai have 30 seconds to score, if not they both lose
 lastTick = pygame.time.get_ticks()
 
+timerIncrement = 1000 # every x games
+timerIncrementAmount = 5 # timer increments by y
+
 # nn stats
 gameNum = 0 # how many times has the simulation ran
 genNum = 0 # what generation are we in
@@ -40,6 +43,10 @@ survivalRate = 0.5
 
 redAgents = []
 blueAgents = []
+
+# fitness stats
+
+minDistPerSec = 100 # minimum distance per second to not get punished
 
 # average fitness after each generation
 redAverageFitness = []
@@ -147,7 +154,11 @@ def assessAgents():
 
 # reset game
 def reset():
-    global timer, gameNum, agentsPerGen, genNum, players, entities
+    global timer, gameNum, agentsPerGen, genNum, players, entities, timerIncrement, timerIncrementAmount
+
+    # round fitness
+    for player in players:
+        player.fitness = math.floor(player.fitness)
 
     if gameNum != 0:
         print(f"Red fitness: {players[0].fitness}")
@@ -176,6 +187,10 @@ def reset():
         player.collideVector = Vector2(0,0)
 
         player.ballKicks = 0
+        if player.team == "red":
+            player.lastPos = Vector2(540,360)
+        elif player.team == "blue":
+            player.lastPos = Vector2(740,360)
 
         player.fitness = 0
 
@@ -192,18 +207,18 @@ def reset():
     # increment game number
     gameNum += 1
     textElements[3].text = str(gameNum)
-    
-    print(f"Game #{gameNum}")
-
-    # reset timer
-    # every 500 games the timer length increases by 5 seconds
-    timer = 5 + (gameNum // 500) * 5
-    textElements[2].text = str(timer)
 
     # assess agent fitness
     if gameNum % agentsPerGen == 0 and gameNum != 0:
         genNum += 1
         assessAgents()
+
+    # reset timer
+    # every 500 games the timer length increases by 5 seconds
+    timer = 5 + (gameNum // timerIncrement) * timerIncrementAmount
+    textElements[2].text = str(timer)
+    
+    print(f"\nGame #{gameNum}")
 
 # main loop
 running = True
@@ -286,6 +301,13 @@ while running:
 
             # ball interaction
             for ball in balls:
+                distFromBall = e.pos.distance(ball.pos)
+
+                if distFromBall > 100:
+                    e.fitness -= -(distFromBall-100)*0.01
+                else:
+                    e.fitness += (100-distFromBall)*0.01
+
                 if e.intersects(ball):
                     e.kickBall(ball)
 
@@ -321,6 +343,8 @@ while running:
                 # check and score goals
                 score = e.checkGoal(goal)
                 if score == "red":
+                    print("Red scored!")
+
                     redScore += 1
                     textElements[0].text = str(redScore)
 
@@ -330,6 +354,7 @@ while running:
                     reset()
 
                 elif score == "blue":
+                    print("Blue scored!")
                     blueScore += 1
                     textElements[1].text = str(blueScore)
 
@@ -371,9 +396,19 @@ while running:
 
         timer -= 1
         textElements[2].text = str(timer)
-
+        
+        # dash cooldown
         for player in players:
             player.dashCooldown -= 1
+
+        # track distance travelled in the last second
+        for player in players:
+            dist = player.pos.distance(player.lastPos)
+
+            if dist < minDistPerSec:
+                player.fitness -= minDistPerSec
+
+            player.lastPos = Vector2(player.pos.x, player.pos.y)
 
         lastTick = currentTime
 
