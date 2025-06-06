@@ -26,9 +26,9 @@ class Goal(Object):
             offset = 1175
 
         elements = [
-            *[BoxElement(Colors.lightgray, _+offset-1, 235, 10, 250, 2) for _ in range(9, 97, 8)], # vertical netting
-            *[BoxElement(Colors.lightgray, offset, _, 105, 10, 2) for _ in range(243, 473, 8)], # horizontal netting
-            BoxElement(Colors.white, offset, 235, 105, 250, 5) # frame
+            *[BoxElement(Colors.lightgray, _+offset-1, 135, 10, 450, 2) for _ in range(9, 97, 8)], # vertical netting
+            *[BoxElement(Colors.lightgray, offset, _, 105, 10, 2) for _ in range(135, 580, 8)], # horizontal netting
+            BoxElement(Colors.white, offset, 135, 105, 450, 5) # frame
         ]
 
         # draw each part of the goal
@@ -39,21 +39,21 @@ class Goal(Object):
     # rect for the area where a goal is scored
     def getRect(self):
         if self.team == "red":
-            return pygame.Rect(5, 240, 100, 240)
+            return pygame.Rect(5, 140, 100, 440)
         elif self.team == "blue":
-            return pygame.Rect(1175, 240, 100, 240)
+            return pygame.Rect(1175, 140, 100, 440)
     
     # dict of rects for the area where entities will collide with the goal
     def getCollisionRects(self):
         if self.team == "red":
             return {
-                "back": pygame.Rect(0, 235, 5, 250),
-                "top": pygame.Rect(0, 235, 105, 5),
-                "bottom": pygame.Rect(0, 480, 105, 5),
+                "back": pygame.Rect(0, 135, 5, 450),
+                "top": pygame.Rect(0, 135, 105, 5),
+                "bottom": pygame.Rect(0, 580, 105, 5),
             }
         elif self.team == "blue":
             return {
-                "back": pygame.Rect(1275, 235, 5, 250),
-                "top": pygame.Rect(1175, 235, 105, 5),
-                "bottom": pygame.Rect(1175, 480, 105, 5),
+                "back": pygame.Rect(1275, 135, 5, 450),
+                "top": pygame.Rect(1175, 135, 105, 5),
+                "bottom": pygame.Rect(1175, 580, 105, 5),
             }

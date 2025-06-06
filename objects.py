@@ -85,12 +85,15 @@ class Entity(Object):
 
             self.moveVector *= Entity.slowdownRate
 
-        # collision vector
+        # collision vectors
         if hasattr(self, "pushVector"):
             vel += self.pushVector
 
         if hasattr(self, "collideVector"):
             vel += self.collideVector
+
+        if hasattr(self, "boundCollideVector"):
+            vel += self.boundCollideVector
 
         # move the entity
         self.pos.x += vel.x

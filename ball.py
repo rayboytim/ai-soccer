@@ -15,7 +15,7 @@ class Ball(Entity):
     minRadius = 20
 
     def __init__(self):
-        super().__init__(10, 640, 360) # always spawn in middle of screen, falling down
+        super().__init__(0, 640, 360) # always spawn in middle of screen
 
         self.color = Colors.gray
 
