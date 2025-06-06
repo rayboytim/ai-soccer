@@ -3,9 +3,11 @@
 
 import random
 import math
+import copy
 
 from objects import *
 from gameutils import *
+from nn import *
 
 # player class
 class Player(Entity):
@@ -16,11 +18,19 @@ class Player(Entity):
     # multiplier for how fast player collisions occur
     collisionStiffness = 0.1
 
-    walkSpeed = 5
+    maxWalkSpeed = 5
 
     # ball hit multipliers
     speedMult = 1.75
     zVelMult = 0.1
+
+    # dash cooldown timer
+    dashCooldownTimer = 5
+    
+    # amount that weight can be mutated by at once, -mutateAmount to mutateAmount
+    mutateAmount = 1
+    # percentage of weights to mutate
+    mutateChance = 0.1
 
     def __init__(self, name: str, team: str):
         self.name = name
@@ -29,19 +39,39 @@ class Player(Entity):
         # team info
         if team == "red":
             self.color = Colors.red
-            super().__init__(0, 240, 360)
+            super().__init__(0, 540, 360)
         elif team == "blue":
             self.color = Colors.blue
-            super().__init__(0, 1040, 360)
+            super().__init__(0, 740, 360)
 
         self.touchingBall = False
 
         # user controlled move vector
         self.moveVector = Vector2(0,0)
 
+        # screen bound collision
+        self.boundCollideVector = Vector2(0,0)
+        
         # goal collision
         self.lastCollide = None
         self.collideVector = Vector2(0,0)
+
+        # movement
+        self.dashCooldown = 0
+
+        # per-game stats
+        self.ballKicks = 0
+
+        # brain
+        layers = [9,12,8,1]
+        self.nn = NN(layers)
+        self.fitness = 0
+
+        # start with a mutation
+        self.nn.mutate(Player.mutateAmount, Player.mutateChance)
+
+        # last save of nn
+        self.nnSave = copy.deepcopy(self.nn)
 
     def draw(self, surface):
         # calculate visual pos based on height
@@ -64,7 +94,38 @@ class Player(Entity):
         info = (top, left, Player.minRadius*2, Player.minRadius*2)
 
         return pygame.Rect(*info)
+    
+    # movement
+    def move(self, angle: Angle):
 
+        # if the player is dashing, don't slow them down
+        self.speed = max(Player.maxWalkSpeed, self.speed)
+
+        # change player's angle
+        self.angle = Angle(angle)
+
+        if self.dashCooldown < 0:
+            self.speed = Player.maxWalkSpeed
+            self.dashCooldown = 0
+
+    # dash
+    def dash(self):
+        if not self.dashCooldown:
+            self.dashCooldown = 5
+            self.speed = Player.maxWalkSpeed * 2
+
+    # good result for nn, save data and mutate
+    def win(self):
+        print(f"{self.name}++")
+        self.nnSave = copy.deepcopy(self.nn)
+        self.nn.mutate(Player.mutateAmount, Player.mutateChance)
+
+    # bad result for nn, delete data and re-mutate last save
+    def lose(self):
+        self.nn = copy.deepcopy(self.nnSave)
+        self.nn.mutate(Player.mutateAmount, Player.mutateChance)
+
+    # collision with other players
     def playerCollide(self, other):
 
         # if not colliding, reset push vectors
@@ -98,6 +159,36 @@ class Player(Entity):
         # add to push vectors
         self.pushVector += pushVector
         other.pushVector -= pushVector
+
+    # screen bound collision
+    def collideWalls(self, screenW, screenH):
+        colliding = False
+
+        # left
+        if self.pos.x - Player.minRadius <= 0:
+            colliding = True
+            self.boundCollideVector += Vector2(1, 0)
+
+        # right
+        elif self.pos.x + Player.minRadius >= screenW:
+            colliding = True
+            self.boundCollideVector += Vector2(-1, 0)
+
+        # bottom
+        if self.pos.y - Player.minRadius <= 0:
+            colliding = True
+            self.boundCollideVector += Vector2(0, 1)
+
+        # top
+        elif self.pos.y + Player.minRadius >= screenH:
+            colliding = True
+            self.boundCollideVector += Vector2(0, -1)
+
+        if not colliding:
+            self.boundCollideVector = Vector2(0,0)
+        else:
+            # remove fitness for hitting wall
+            self.fitness -= 5
 
     # goal post collision
     def goalCollide(self, goal):
@@ -136,11 +227,13 @@ class Player(Entity):
                 self.collideVector += Vector2(0, 1)
         
         # clamp collide vector
-        self.collideVector = Vector2(self.collideVector.x, max(-1 * Player.walkSpeed, min(self.collideVector.y, Player.walkSpeed)))
+        self.collideVector = Vector2(self.collideVector.x, max(-1 * Player.maxWalkSpeed, min(self.collideVector.y, Player.maxWalkSpeed)))
 
-    # walk into ball, lightly tap
-    def tapBall(self, ball):
+    # kick ball
+    def kickBall(self, ball):
         if not self.touchingBall:
+            self.ballKicks += 1
+
             totalSpeed = self.speed + self.moveVector.length() + self.pushVector.length()
 
             ball.angle = Angle.angleBetween(self.pos, ball.pos)
