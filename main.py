@@ -149,7 +149,7 @@ def assessAgents():
 def reset():
     global timer, gameNum, agentsPerGen, genNum, players, entities
 
-    if gameNum != -1:
+    if gameNum != 0:
         print(f"Red fitness: {players[0].fitness}")
         print(f"Blue fitness: {players[1].fitness}")
 
