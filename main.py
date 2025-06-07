@@ -51,8 +51,8 @@ blueAgents = []
 minDistPerSec = 100 # minimum distance per second to not get punished
 
 # average fitness after each generation
-redAverageFitness = []
-blueAverageFitness = []
+redmedianFitness = []
+bluemedianFitness = []
 
 for _ in range(agentsPerGen):
     redAgents.append(Player("Red", "red"))
@@ -105,25 +105,28 @@ entities = players + balls
 # assess agent performance
 # kill off worst and reproduce & mutate best
 def assessAgents():
-    global redAgents, blueAgents, agentsPerGen, survivalRate, redAverageFitness, blueAverageFitness, genNum
+    global redAgents, blueAgents, agentsPerGen, survivalRate, redmedianFitness, bluemedianFitness, genNum
 
     print(f"End of gen {genNum}")
 
-    # find average fitness
-    redAverageFitness.append(0)
-    blueAverageFitness.append(0)
+    # add median fitness to list
+
+    redFitness = []
+    blueFitness = []
 
     for a in redAgents:
-        redAverageFitness[genNum-1] += a.fitness
+        redFitness.append(a.fitness)
     for a in blueAgents:
-        blueAverageFitness[genNum-1] += a.fitness
+        blueFitness.append(a.fitness)
 
-    redAverageFitness[genNum-1] = math.floor(redAverageFitness[genNum-1]/agentsPerGen)
-    
-    blueAverageFitness[genNum-1] = math.floor(blueAverageFitness[genNum-1]/agentsPerGen)
+    redFitness.sort()
+    blueFitness.sort()
 
-    print(f"Red average fitness: {redAverageFitness}")
-    print(f"Blue average fitness: {blueAverageFitness}")
+    redmedianFitness.append(redFitness[agentsPerGen/2])
+    bluemedianFitness.append(blueFitness[agentsPerGen/2])
+
+    print(f"Red median fitness: {redmedianFitness}")
+    print(f"Blue median fitness: {bluemedianFitness}")
 
     # sort agents by fitness
     redAgents = sorted(redAgents, key = lambda x: x.fitness, reverse=True)
