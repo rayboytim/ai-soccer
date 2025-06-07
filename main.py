@@ -122,8 +122,8 @@ def assessAgents():
     redFitness.sort()
     blueFitness.sort()
 
-    redmedianFitness.append(redFitness[agentsPerGen/2])
-    bluemedianFitness.append(blueFitness[agentsPerGen/2])
+    redmedianFitness.append(redFitness[int(agentsPerGen//2)])
+    bluemedianFitness.append(blueFitness[int(agentsPerGen//2)])
 
     print(f"Red median fitness: {redmedianFitness}")
     print(f"Blue median fitness: {bluemedianFitness}")
