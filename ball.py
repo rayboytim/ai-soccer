@@ -23,6 +23,9 @@ class Ball(Entity):
         self.lastHit = None
         self.canScore = True
 
+        # last player to kick ball
+        self.lastKick = None
+
     def draw(self, surface):
         # calculate visual pos based on height
         # draws entity slightly towards the nearest corner of the screen when in the air

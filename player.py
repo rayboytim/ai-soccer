@@ -19,6 +19,7 @@ class Player(Entity):
     collisionStiffness = 0.1
 
     maxWalkSpeed = 5
+    walkSmoothing = 0.85
 
     # ball hit multipliers
     speedMult = 1.75
@@ -48,6 +49,7 @@ class Player(Entity):
 
         # user controlled move vector
         self.moveVector = Vector2(0,0)
+        self.smoothedMoveVector = Vector2(0, 0)
 
         # screen bound collision
         self.boundCollideVector = Vector2(0,0)
@@ -107,8 +109,19 @@ class Player(Entity):
         # if the player is dashing, don't slow them down
         self.speed = max(Player.maxWalkSpeed, self.speed)
 
+        # apply smoothening and momentum
+        self.smoothedMoveVector.x = (
+            Player.walkSmoothing * self.smoothedMoveVector.x +
+            (1 - Player.walkSmoothing) * vector.x
+        )
+
+        self.smoothedMoveVector.y = (
+            Player.walkSmoothing * self.smoothedMoveVector.y +
+            (1 - Player.walkSmoothing) * vector.y
+        )
+
         # change player's angle
-        self.moveVector = vector
+        self.moveVector = self.smoothedMoveVector
 
         # if self.dashCooldown < 0:
         #     self.speed = Player.maxWalkSpeed
@@ -183,7 +196,7 @@ class Player(Entity):
             self.boundCollideVector = Vector2(0,0)
         else:
             # remove fitness for hitting wall
-            self.fitness -= 10
+            self.fitness -= 5
 
     # goal post collision
     def goalCollide(self, goal):
@@ -232,10 +245,11 @@ class Player(Entity):
         if not self.touchingBall:
             self.ballKicks += 1
 
-            totalSpeed = self.speed + self.moveVector.length() + self.pushVector.length()
+            totalSpeed = self.moveVector.length() + self.pushVector.length()
 
             ball.angle = Angle.angleBetween(self.pos, ball.pos)
             ball.speed = totalSpeed * Player.speedMult
             ball.zVel = totalSpeed * Player.zVelMult
 
             self.touchingBall = True
+            ball.lastKick = self

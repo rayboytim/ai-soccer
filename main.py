@@ -38,8 +38,10 @@ timerIncrementAmount = 5 # timer increments by y
 gameNum = 0 # how many times has the simulation ran
 genNum = 0 # what generation are we in
 
-agentsPerGen = 10 # also the number of games per generation
+agentsPerGen = 20 # also the number of games per generation
 survivalRate = 0.5
+
+fitnessThreshold = -1000 # if both agents go under this value, end game early
 
 redAgents = []
 blueAgents = []
@@ -116,11 +118,9 @@ def assessAgents():
     for a in blueAgents:
         blueAverageFitness[genNum-1] += a.fitness
 
-    redAverageFitness[genNum-1] = math.floor(
-    redAverageFitness[genNum-1]/agentsPerGen)
+    redAverageFitness[genNum-1] = math.floor(redAverageFitness[genNum-1]/agentsPerGen)
     
-    blueAverageFitness[genNum-1] = math.floor(
-    blueAverageFitness[genNum-1]/agentsPerGen)
+    blueAverageFitness[genNum-1] = math.floor(blueAverageFitness[genNum-1]/agentsPerGen)
 
     print(f"Red average fitness: {redAverageFitness}")
     print(f"Blue average fitness: {blueAverageFitness}")
@@ -186,6 +186,8 @@ def reset():
         ball.angle = Angle(0)
         ball.pushVector = Vector2(0,0)
         ball.collideVector = Vector2(0,0)
+
+        ball.lastKick = None
 
     # reset players
     for player in players:
@@ -316,18 +318,19 @@ while running:
 
             # ball interaction
             for ball in balls:
-                distFromBall = e.pos.distance(ball.pos)
-
-                if distFromBall > 100:
-                    e.fitness -= -(distFromBall-100)*0.01
-                else:
-                    e.fitness += (100-distFromBall)*0.01
+                # dec fitness if player goes past the ball
+                if e == players[0]:
+                    if e.pos.x > ball.pos.x:
+                        e.fitness -= (e.pos.x - ball.pos.x) / 640
+                if e == players[1]:
+                    if e.pos.x < ball.pos.x:
+                        e.fitness -= (ball.pos.x - e.pos.x) / 640
 
                 if e.intersects(ball):
                     e.kickBall(ball)
 
                     # add to fitness
-                    e.fitness += 5
+                    e.fitness += 100
                 else:
                     e.touchingBall = False
 
@@ -360,21 +363,28 @@ while running:
                 if score == "red":
                     print("Red scored!")
 
+                    if ball.lastKick == players[0]:
+                        players[0].fitness += 1000
+                        players[1].fitness -= 500
+                    else:
+                        players[1].fitness -= 2000
+
                     redScore += 1
                     textElements[0].text = str(redScore)
-
-                    players[0].fitness += 1000
-                    players[1].fitness -= 500
 
                     reset()
 
                 elif score == "blue":
                     print("Blue scored!")
+
+                    if ball.lastKick == players[1]:
+                        players[1].fitness += 1000
+                        players[0].fitness -= 500
+                    else:
+                        players[0].fitness -= 2000
+
                     blueScore += 1
                     textElements[1].text = str(blueScore)
-
-                    players[1].fitness += 1000
-                    players[0].fitness -= 500
 
                     reset()
             
@@ -405,6 +415,11 @@ while running:
     # render goals
     for goal in goals:
         goal.draw(surf)
+
+    # if both players have fitness under threshold, end game early
+    if len(players) == 2:
+        if players[0].fitness < fitnessThreshold and players[1].fitness < fitnessThreshold:
+            reset()
 
     # timer
     currentTime = pygame.time.get_ticks()
