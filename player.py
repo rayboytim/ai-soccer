@@ -69,7 +69,7 @@ class Player(Entity):
             self.lastPos = Vector2(740,360)
 
         # brain
-        layers = [9,12,8,1]
+        layers = [6,12,8,2]
         self.nn = NN(layers)
         self.fitness = 0
 
@@ -102,34 +102,23 @@ class Player(Entity):
         return pygame.Rect(*info)
     
     # movement
-    def move(self, angle: Angle):
+    def move(self, vector: Vector2):
 
         # if the player is dashing, don't slow them down
         self.speed = max(Player.maxWalkSpeed, self.speed)
 
         # change player's angle
-        self.angle = Angle(angle)
+        self.moveVector = vector
 
-        if self.dashCooldown < 0:
-            self.speed = Player.maxWalkSpeed
-            self.dashCooldown = 0
+        # if self.dashCooldown < 0:
+        #     self.speed = Player.maxWalkSpeed
+        #     self.dashCooldown = 0
 
     # dash
     def dash(self):
         if not self.dashCooldown:
             self.dashCooldown = 5
             self.speed = Player.maxWalkSpeed * 2
-
-    # good result for nn, save data and mutate
-    def win(self):
-        print(f"{self.name}++")
-        self.nnSave = copy.deepcopy(self.nn)
-        self.nn.mutate(Player.mutateAmount, Player.mutateChance)
-
-    # bad result for nn, delete data and re-mutate last save
-    def lose(self):
-        self.nn = copy.deepcopy(self.nnSave)
-        self.nn.mutate(Player.mutateAmount, Player.mutateChance)
 
     # collision with other players
     def playerCollide(self, other):
@@ -205,6 +194,9 @@ class Player(Entity):
             if not self.intersectsRect(goal, self.lastCollide):
                 self.lastCollide = None
                 self.collideVector = Vector2(0,0)
+            else:
+                # remove fitness for hitting wall
+                self.fitness -= 2
 
         # collide with top of goal
         if self.intersectsRect(goal, goalRects["top"]):

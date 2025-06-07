@@ -13,6 +13,18 @@ class Vector2():
     def toTuple(self) -> tuple:
         return (self.x, self.y)
     
+    # normalize the vector
+    def normalize(self):
+        length = math.sqrt(self.x**2 + self.y**2)
+
+        if length == 0:
+            return Vector2(0, 0)
+
+        newX = self.x / length
+        newY = self.y / length
+        
+        return Vector2(newX, newY)
+    
     # distance from origin
     def length(self):
         return math.sqrt(self.x**2 + self.y**2)

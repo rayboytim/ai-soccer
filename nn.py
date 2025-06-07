@@ -60,10 +60,9 @@ class NN:
                 self.nodes[i] += self.biases[i]
 
         def activation(self):
-            # RELU
+            # tanh
             for node in self.nodes:
-                if node < 0:
-                    node = 0
+                node = math.tanh(node)
                     
         # mutate each layer based on chance and amount
         def mutate(self, amount: float, chance: float):
@@ -86,16 +85,11 @@ class NN:
 
         # loop through each other layer
         for i in range(1, len(self.layers)):
+            # forward function grabbing from previous layer
+            self.layers[i].forward(self.layers[i-1].nodes)
 
-            # last layer has no activation function 
-            if i == len(self.layers)-1:
-                self.layers[i].forward(self.layers[i-1].nodes)
-            # base case
-            else:
-                # forward function grabbing from previous layer
-                self.layers[i].forward(self.layers[i-1].nodes)
-                # activation function
-                self.layers[i].activation()
+            # activation function (tanh, range is [-1, 1])
+            self.layers[i].activation()
 
         # returns output of last layer
         return self.layers[len(self.layers)-1].nodes

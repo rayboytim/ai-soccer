@@ -38,7 +38,7 @@ timerIncrementAmount = 5 # timer increments by y
 gameNum = 0 # how many times has the simulation ran
 genNum = 0 # what generation are we in
 
-agentsPerGen = 20 # also the number of games per generation
+agentsPerGen = 10 # also the number of games per generation
 survivalRate = 0.5
 
 redAgents = []
@@ -60,10 +60,12 @@ for _ in range(agentsPerGen):
 
 # text elements
 textElements = [
-    TextElement(str(redScore), "largeRed", Colors.white),
-    TextElement(str(blueScore), "largeBlue", Colors.white),
+    TextElement(str(redScore), "scoreRed", Colors.white),
+    TextElement(str(blueScore), "scoreBlue", Colors.white),
     TextElement(str(timer), "timer", Colors.white),
     TextElement(str(gameNum), "gameNum", Colors.white),
+    TextElement("", "fitnessRed", Colors.white),
+    TextElement("", "fitnessBlue", Colors.white),
 ]
 
 # map elements, rendered first
@@ -114,8 +116,11 @@ def assessAgents():
     for a in blueAgents:
         blueAverageFitness[genNum-1] += a.fitness
 
-    redAverageFitness[genNum-1] /= agentsPerGen
-    blueAverageFitness[genNum-1] /= agentsPerGen
+    redAverageFitness[genNum-1] = math.floor(
+    redAverageFitness[genNum-1]/agentsPerGen)
+    
+    blueAverageFitness[genNum-1] = math.floor(
+    blueAverageFitness[genNum-1]/agentsPerGen)
 
     print(f"Red average fitness: {redAverageFitness}")
     print(f"Blue average fitness: {blueAverageFitness}")
@@ -172,6 +177,16 @@ def reset():
     
     entities = players + balls
 
+    # reset balls
+    for ball in balls:
+        ball.pos = Vector2(640, 360)
+        ball.height = 0
+
+        ball.speed = 0
+        ball.angle = Angle(0)
+        ball.pushVector = Vector2(0,0)
+        ball.collideVector = Vector2(0,0)
+
     # reset players
     for player in players:
         if player.team == "red":
@@ -193,16 +208,6 @@ def reset():
             player.lastPos = Vector2(740,360)
 
         player.fitness = 0
-
-    # reset balls
-    for ball in balls:
-        ball.pos = Vector2(640, 360)
-        ball.height = 0
-
-        ball.speed = 0
-        ball.angle = Angle(0)
-        ball.pushVector = Vector2(0,0)
-        ball.collideVector = Vector2(0,0)
 
     # increment game number
     gameNum += 1
@@ -248,6 +253,11 @@ while running:
     # if keys[pygame.K_d]:
     #     players[0].moveVector.x = Player.maxWalkSpeed
 
+    # update fitness text
+    if len(players) == 2:
+        textElements[4].text = str(math.floor(players[0].fitness))
+        textElements[5].text = str(math.floor(players[1].fitness))
+
     # render text
     for e in textElements:
         e.draw(surf)
@@ -276,16 +286,21 @@ while running:
                 opponent.pos.y,
                 balls[0].pos.x,
                 balls[0].pos.y,
-                balls[0].angle.degrees,
-                balls[0].speed,
-                balls[0].height,
+                # balls[0].angle.degrees,
+                # balls[0].speed,
+                # balls[0].height,
             ]
 
+            # outputs are the vel [-1, 1]
             outputsfromNN = e.nn.brain(inputsToNN)
 
-            moveAngle = outputsfromNN[0]
+            moveX = outputsfromNN[0]
+            moveY = outputsfromNN[1]
 
-            e.move(moveAngle)
+            # normalize the vector
+            moveVector = Vector2(moveX, moveY).normalize()
+
+            e.move(moveVector)
 
             # player collision
             for otherPlayer in players:
@@ -363,13 +378,15 @@ while running:
 
                     reset()
             
-            # increment points towards ai brain when ball is on one side of the field
+            # inc fitness based on ball location on field
             if e.getRect().centerx > 640:
-                players[0].fitness += 1
-                players[1].fitness -= 1
+                diff = (e.getRect().centerx - 640) / 640
+                
+                players[0].fitness += diff
             elif e.getRect().centerx < 640:
-                players[1].fitness += 1
-                players[0].fitness -= 1
+                diff = (640 - e.getRect().centerx) / 640
+                
+                players[1].fitness += diff
 
         # entity functions
         if isinstance(e, Entity):

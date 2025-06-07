@@ -65,10 +65,12 @@ class CircleElement(MapElement):
 class TextElement(MapElement):
     # text fonts
     fonts = {
-        "largeRed": ("Arial", 44),
-        "largeBlue": ("Arial", 44),
+        "scoreRed": ("Arial", 44),
+        "scoreBlue": ("Arial", 44),
         "timer": ("Arial", 44),
-        "gameNum": ("Arial", 44)
+        "gameNum": ("Arial", 44),
+        "fitnessRed": ("Arial", 32),
+        "fitnessBlue": ("Arial", 32),
     }
 
     def __init__(self, text, font: str, color):
@@ -92,12 +94,12 @@ class TextElement(MapElement):
 
         # position text
         # red -> left, blue -> right
-        if self.fontName == "largeRed":
+        if self.fontName == "scoreRed":
             self.pos = Vector2(10, 0)
 
             surface.blit(textRender, self.pos.toTuple())
 
-        elif self.fontName == "largeBlue":
+        elif self.fontName == "scoreBlue":
             rect = textRender.get_rect()
             rect.topright = (1270, 0)
 
@@ -112,6 +114,18 @@ class TextElement(MapElement):
         elif self.fontName == "gameNum":
             rect = textRender.get_rect()
             rect.center = (640, 696)
+
+            surface.blit(textRender, rect)
+
+        elif self.fontName == "fitnessRed":
+            rect = textRender.get_rect()
+            rect.bottomleft = (10, 720)
+
+            surface.blit(textRender, rect)
+
+        elif self.fontName == "fitnessBlue":
+            rect = textRender.get_rect()
+            rect.bottomright = (1270, 720)
 
             surface.blit(textRender, rect)
     

@@ -73,16 +73,16 @@ class Entity(Object):
     # moves the entity based on its angle and speed
     def updatePos(self):
         
-        # calculate 2d velocity
-        vel = Vector2(
-            self.angle.x * self.speed,
-            self.angle.y * self.speed
-        )
-        
-        # user controlled move vector
-        if hasattr(self, "moveVector"):
-            vel += self.moveVector
-
+        # calculate 2d velocity, except for Player class
+        from player import Player
+        if not isinstance(self, Player):
+            vel = Vector2(
+                self.angle.x * self.speed,
+                self.angle.y * self.speed
+            )
+        else:
+            # player movement
+            vel = self.moveVector
             self.moveVector *= Entity.slowdownRate
 
         # collision vectors
