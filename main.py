@@ -190,9 +190,9 @@ def reset():
     # reset players
     for player in players:
         if player.team == "red":
-            player.pos = Vector2(540, 360)
+            player.pos = Vector2(140, 360)
         elif player.team == "blue":
-            player.pos = Vector2(740, 360)
+            player.pos = Vector2(1140, 360)
         
         player.height = 0
 
@@ -298,7 +298,7 @@ while running:
             moveY = outputsfromNN[1]
 
             # normalize the vector
-            moveVector = Vector2(moveX, moveY).normalize()
+            moveVector = Vector2(moveX, moveY).normalize() * Player.maxWalkSpeed
 
             e.move(moveVector)
 

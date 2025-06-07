@@ -39,10 +39,10 @@ class Player(Entity):
         # team info
         if team == "red":
             self.color = Colors.red
-            super().__init__(0, 540, 360)
+            super().__init__(0, 140, 360)
         elif team == "blue":
             self.color = Colors.blue
-            super().__init__(0, 740, 360)
+            super().__init__(0, 1140, 360)
 
         self.touchingBall = False
 
@@ -183,7 +183,7 @@ class Player(Entity):
             self.boundCollideVector = Vector2(0,0)
         else:
             # remove fitness for hitting wall
-            self.fitness -= 5
+            self.fitness -= 10
 
     # goal post collision
     def goalCollide(self, goal):
@@ -196,7 +196,7 @@ class Player(Entity):
                 self.collideVector = Vector2(0,0)
             else:
                 # remove fitness for hitting wall
-                self.fitness -= 2
+                self.fitness -= 5
 
         # collide with top of goal
         if self.intersectsRect(goal, goalRects["top"]):
