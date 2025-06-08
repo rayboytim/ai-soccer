@@ -28,7 +28,9 @@ clock = pygame.time.Clock()
 redScore = 0
 blueScore = 0
 
-timer = 5 # both ai have 30 seconds to score, if not they both lose
+timer = 5.0 # uses float, accurate time
+
+maxTime = 5 # total number of time
 lastTick = pygame.time.get_ticks()
 
 timerIncrement = 1000 # every x games
@@ -41,18 +43,37 @@ genNum = 0 # what generation are we in
 agentsPerGen = 20 # also the number of games per generation
 survivalRate = 0.5
 
-fitnessThreshold = -1000 # if both agents go under this value, end game early
-
 redAgents = []
 blueAgents = []
 
-# fitness stats
+# fitness modifiers
 
+# thresholds
 minDistPerSec = 100 # minimum distance per second to not get punished
+ballDist = 200 # distance from ball to inc/dec fitness
+
+# flat score boosts
+goalFitnessGain = 1000 # scoring a goal
+goalFitnessLoss = -500 # getting scored on
+selfGoalFitnessLoss = -2000 # scoring on yourself
+
+# multipliers
+ballVelocityMult = 0.1 # based on ball velocity
+ballDistMult = 0.005 # based on dist from ball
+
+# long term stats
 
 # average fitness after each generation
 redmedianFitness = []
 bluemedianFitness = []
+
+# number of goals scored per generation
+redGoals = []
+blueGoals = []
+
+# high score per generation
+redHigh = []
+blueHigh = []
 
 for _ in range(agentsPerGen):
     redAgents.append(Player("Red", "red"))
@@ -64,7 +85,7 @@ for _ in range(agentsPerGen):
 textElements = [
     TextElement(str(redScore), "scoreRed", Colors.white),
     TextElement(str(blueScore), "scoreBlue", Colors.white),
-    TextElement(str(timer), "timer", Colors.white),
+    TextElement(str(int(math.ceil(timer))), "timer", Colors.white),
     TextElement(str(gameNum), "gameNum", Colors.white),
     TextElement("", "fitnessRed", Colors.white),
     TextElement("", "fitnessBlue", Colors.white),
@@ -105,28 +126,46 @@ entities = players + balls
 # assess agent performance
 # kill off worst and reproduce & mutate best
 def assessAgents():
-    global redAgents, blueAgents, agentsPerGen, survivalRate, redmedianFitness, bluemedianFitness, genNum
+    global redAgents, blueAgents, agentsPerGen, survivalRate, redmedianFitness, bluemedianFitness, genNum, redGoals, blueGoals, redHigh, blueHigh
 
-    print(f"End of gen {genNum}")
+    print(f"\nEnd of gen {genNum}")
 
-    # add median fitness to list
+    # fitness stats
 
     redFitness = []
     blueFitness = []
 
     for a in redAgents:
-        redFitness.append(a.fitness)
+        if a.fitness != 0:
+            redFitness.append(a.fitness)
     for a in blueAgents:
-        blueFitness.append(a.fitness)
+        if a.fitness != 0:
+            blueFitness.append(a.fitness)
 
-    redFitness.sort()
-    blueFitness.sort()
+    redFitness.sort(reverse=True)
+    blueFitness.sort(reverse=True)
 
-    redmedianFitness.append(redFitness[int(agentsPerGen//2)])
-    bluemedianFitness.append(blueFitness[int(agentsPerGen//2)])
+    # median
+    print(f"\nRed median fitness this gen: {redFitness[len(redFitness)//2]}")
+    print(f"Blue median fitness this gen: {blueFitness[len(blueFitness)//2]}")
+    
+    # high score
+    print(f"\nRed best fitness this gen: {redFitness[0]}")
+    print(f"Blue best fitness this gen: {blueFitness[0]}")
 
-    print(f"Red median fitness: {redmedianFitness}")
+    # median over time
+    redmedianFitness.append(redFitness[len(redFitness)//2])
+    bluemedianFitness.append(blueFitness[len(blueFitness)//2])
+
+    print(f"\nRed median fitness: {redmedianFitness}")
     print(f"Blue median fitness: {bluemedianFitness}")
+
+    # high score over time
+    redHigh.append(redFitness[0])
+    blueHigh.append(blueFitness[0])
+
+    print(f"\nRed best fitness: {redHigh}")
+    print(f"Blue best fitness: {blueHigh}")
 
     # sort agents by fitness
     redAgents = sorted(redAgents, key = lambda x: x.fitness, reverse=True)
@@ -138,6 +177,13 @@ def assessAgents():
     # remove those that don't survive
     redAgents = redAgents[:agentsToLive]
     blueAgents = blueAgents[:agentsToLive]
+
+    for a in redAgents:
+        if a.fitness == 0:
+            redAgents.remove(a)
+    for a in blueAgents:
+        if a.fitness == 0:
+            blueAgents.remove(a)
 
     topRedAgents = redAgents[:agentsToLive]
     topBlueAgents = blueAgents[:agentsToLive]
@@ -162,11 +208,16 @@ def assessAgents():
 
 # reset game
 def reset():
-    global timer, gameNum, agentsPerGen, genNum, players, entities, timerIncrement, timerIncrementAmount
+    global timer, gameNum, agentsPerGen, genNum, players, entities, timerIncrement, timerIncrementAmount, maxTime
 
     # round fitness
     for player in players:
         player.fitness = math.floor(player.fitness)
+        
+        # if 0 fitness, set to -1
+        # separates agents from any cases where an agent doesn't play
+        if player.fitness == 0:
+            player.fitness = -1
 
     if gameNum != 0:
         print(f"Red fitness: {players[0].fitness}")
@@ -224,9 +275,8 @@ def reset():
         assessAgents()
 
     # reset timer
-    # every 500 games the timer length increases by 5 seconds
-    timer = 5 + (gameNum // timerIncrement) * timerIncrementAmount
-    textElements[2].text = str(timer)
+    timer = 5.0
+    textElements[2].text = str(int(math.ceil(timer)))
     
     print(f"\nGame #{gameNum}")
 
@@ -283,6 +333,9 @@ while running:
             elif e == players[1]:
                 opponent = players[0]
 
+            # get percent of way done simulation
+            timerPercent = timer / maxTime
+
             # inputs are the locations of all entities
             inputsToNN = [
                 e.pos.x,
@@ -294,6 +347,7 @@ while running:
                 # balls[0].angle.degrees,
                 # balls[0].speed,
                 # balls[0].height,
+                timerPercent,
             ]
 
             # outputs are the vel [-1, 1]
@@ -329,11 +383,17 @@ while running:
                     if e.pos.x < ball.pos.x:
                         e.fitness -= (ball.pos.x - e.pos.x) / 640
 
+                # inc / dec fitness based on distance from ball
+                dist = e.pos.distance(ball.pos)
+
+                if dist > ballDist:
+                    e.fitness -= (dist - ballDist) * ballDistMult
+                else:
+                    e.fitness += (ballDist - dist) * ballDistMult
+
+                # kick ball
                 if e.intersects(ball):
                     e.kickBall(ball)
-
-                    # add to fitness
-                    e.fitness += 100
                 else:
                     e.touchingBall = False
 
@@ -367,10 +427,10 @@ while running:
                     print("Red scored!")
 
                     if ball.lastKick == players[0]:
-                        players[0].fitness += 1000
-                        players[1].fitness -= 500
+                        players[0].fitness += goalFitnessGain
+                        players[1].fitness += goalFitnessLoss
                     else:
-                        players[1].fitness -= 2000
+                        players[1].fitness += selfGoalFitnessLoss
 
                     redScore += 1
                     textElements[0].text = str(redScore)
@@ -381,25 +441,15 @@ while running:
                     print("Blue scored!")
 
                     if ball.lastKick == players[1]:
-                        players[1].fitness += 1000
-                        players[0].fitness -= 500
+                        players[1].fitness += goalFitnessGain
+                        players[0].fitness += goalFitnessLoss
                     else:
-                        players[0].fitness -= 2000
+                        players[0].fitness += selfGoalFitnessLoss
 
                     blueScore += 1
                     textElements[1].text = str(blueScore)
 
                     reset()
-            
-            # inc fitness based on ball location on field
-            if e.getRect().centerx > 640:
-                diff = (e.getRect().centerx - 640) / 640
-                
-                players[0].fitness += diff
-            elif e.getRect().centerx < 640:
-                diff = (640 - e.getRect().centerx) / 640
-                
-                players[1].fitness += diff
 
         # entity functions
         if isinstance(e, Entity):
@@ -419,42 +469,21 @@ while running:
     for goal in goals:
         goal.draw(surf)
 
-    # if both players have fitness under threshold, end game early
-    if len(players) == 2:
-        if players[0].fitness < fitnessThreshold and players[1].fitness < fitnessThreshold:
-            reset()
-
-    # timer
-    currentTime = pygame.time.get_ticks()
-
-    if currentTime - lastTick >= 1000: # 1000ms
-
-        timer -= 1
-        textElements[2].text = str(timer)
-        
-        # dash cooldown
-        for player in players:
-            player.dashCooldown -= 1
-
-        # track distance travelled in the last second
-        for player in players:
-            dist = player.pos.distance(player.lastPos)
-
-            if dist < minDistPerSec:
-                player.fitness -= minDistPerSec
-
-            player.lastPos = Vector2(player.pos.x, player.pos.y)
-
-        lastTick = currentTime
-
-        # time up
-        if timer <= 0:
-            reset()
-
     # update screen
     pygame.display.update()
+
+    # timer
+
     # tick at 60 fps
     dt = clock.tick(60)
+    
+    # subtract dt from timer
+    timer -= dt / 1000
+    textElements[2].text = str(int(math.ceil(timer)))
+
+    # time up
+    if timer <= 0:
+        reset()
 
 pygame.quit()
 sys.exit()

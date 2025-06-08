@@ -27,11 +27,14 @@ class Player(Entity):
 
     # dash cooldown timer
     dashCooldownTimer = 5
+
+    # nn vars
     
-    # amount that weight can be mutated by at once, -mutateAmount to mutateAmount
-    mutateAmount = 1
-    # percentage of weights to mutate
-    mutateChance = 0.1
+    mutateAmount = 0.2 # amount that weight can be mutated by at once, -mutateAmount to mutateAmount
+    mutateChance = 0.1 # percentage of weights to mutate
+
+    ballKickFitnessGain = 200 # fitness gain per ball kick
+    wallPunishment = -1 # fitness loss per frame touching wall
 
     def __init__(self, name: str, team: str):
         self.name = name
@@ -71,7 +74,8 @@ class Player(Entity):
             self.lastPos = Vector2(740,360)
 
         # brain
-        layers = [6,12,8,2]
+        layers = [7,12,8,2]
+
         self.nn = NN(layers)
         self.fitness = 0
 
@@ -196,7 +200,7 @@ class Player(Entity):
             self.boundCollideVector = Vector2(0,0)
         else:
             # remove fitness for hitting wall
-            self.fitness -= 5
+            self.fitness += Player.wallPunishment
 
     # goal post collision
     def goalCollide(self, goal):
@@ -209,7 +213,7 @@ class Player(Entity):
                 self.collideVector = Vector2(0,0)
             else:
                 # remove fitness for hitting wall
-                self.fitness -= 5
+                self.fitness += Player.wallPunishment
 
         # collide with top of goal
         if self.intersectsRect(goal, goalRects["top"]):
@@ -253,3 +257,6 @@ class Player(Entity):
 
             self.touchingBall = True
             ball.lastKick = self
+
+            # inc fitness
+            self.fitness += Player.ballKickFitnessGain
