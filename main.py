@@ -24,19 +24,17 @@ pygame.display.set_caption("AI Soccer by Ray Boytim")
 
 clock = pygame.time.Clock()
 
-# stats
-redScore = 0
-blueScore = 0
+# timer
 
-timer = 5.0 # uses float, accurate time
+timer = 1.0 # uses float, accurate time
 
-maxTime = 5 # total number of time
+maxTime = 15 # total number of time
 lastTick = pygame.time.get_ticks()
 
-timerIncrement = 1000 # every x games
-timerIncrementAmount = 5 # timer increments by y
+gameSpeed = 3 # mult the game runs
 
 # nn stats
+
 gameNum = 0 # how many times has the simulation ran
 genNum = 0 # what generation are we in
 
@@ -53,27 +51,26 @@ minDistPerSec = 100 # minimum distance per second to not get punished
 ballDist = 200 # distance from ball to inc/dec fitness
 
 # flat score boosts
-goalFitnessGain = 1000 # scoring a goal
-goalFitnessLoss = -500 # getting scored on
-selfGoalFitnessLoss = -2000 # scoring on yourself
+goalFitnessGain = 500 # scoring a goal
+goalFitnessLoss = -200 # getting scored on
+selfGoalFitnessLoss = -500 # scoring on yourself
 
 # multipliers
 ballVelocityMult = 0.1 # based on ball velocity
 ballDistMult = 0.005 # based on dist from ball
 
-# long term stats
+# stats
+
+# goals
+redScore = 0
+blueScore = 0
 
 # average fitness after each generation
 redmedianFitness = []
 bluemedianFitness = []
 
-# number of goals scored per generation
-redGoals = []
-blueGoals = []
-
-# high score per generation
-redHigh = []
-blueHigh = []
+lastFiveRedMedian = []
+lastFiveBlueMedian = []
 
 for _ in range(agentsPerGen):
     redAgents.append(Player("Red", "red"))
@@ -130,7 +127,7 @@ def assessAgents():
 
     print(f"\nEnd of gen {genNum}")
 
-    # fitness stats
+    # gen stats
 
     redFitness = []
     blueFitness = []
@@ -148,24 +145,38 @@ def assessAgents():
     # median
     print(f"\nRed median fitness this gen: {redFitness[len(redFitness)//2]}")
     print(f"Blue median fitness this gen: {blueFitness[len(blueFitness)//2]}")
+
+    # median per gen
+    redmedianFitness.append(redFitness[len(redFitness)//2])
+    bluemedianFitness.append(blueFitness[len(blueFitness)//2])
     
     # high score
     print(f"\nRed best fitness this gen: {redFitness[0]}")
     print(f"Blue best fitness this gen: {blueFitness[0]}")
 
-    # median over time
-    redmedianFitness.append(redFitness[len(redFitness)//2])
-    bluemedianFitness.append(blueFitness[len(blueFitness)//2])
+    # stats over time
+    # every 5 gens
 
-    print(f"\nRed median fitness: {redmedianFitness}")
-    print(f"Blue median fitness: {bluemedianFitness}")
+    if genNum % 5 == 0:
 
-    # high score over time
-    redHigh.append(redFitness[0])
-    blueHigh.append(blueFitness[0])
+        redAvg = 0
+        blueAvg = 0
 
-    print(f"\nRed best fitness: {redHigh}")
-    print(f"Blue best fitness: {blueHigh}")
+        for i in range(5):
+            redAvg += redmedianFitness[i]
+            blueAvg += bluemedianFitness[i]
+
+        redAvg = math.floor(redAvg/5)
+        blueAvg = math.floor(blueAvg/5)
+
+        lastFiveRedMedian.append(redAvg)
+        lastFiveBlueMedian.append(blueAvg)
+
+        print(f"\nRed median fitness per 5 gens: {lastFiveRedMedian}")
+        print(f"Blue median fitness per 5 gens: {lastFiveBlueMedian}")
+
+        redmedianFitness.clear()
+        bluemedianFitness.clear()
 
     # sort agents by fitness
     redAgents = sorted(redAgents, key = lambda x: x.fitness, reverse=True)
@@ -208,7 +219,7 @@ def assessAgents():
 
 # reset game
 def reset():
-    global timer, gameNum, agentsPerGen, genNum, players, entities, timerIncrement, timerIncrementAmount, maxTime
+    global timer, gameNum, agentsPerGen, genNum, players, entities, maxTime
 
     # round fitness
     for player in players:
@@ -270,12 +281,12 @@ def reset():
     textElements[3].text = str(gameNum)
 
     # assess agent fitness
-    if gameNum % agentsPerGen == 0 and gameNum != 0:
+    if gameNum % agentsPerGen == 1 and gameNum != 1: 
         genNum += 1
         assessAgents()
 
     # reset timer
-    timer = 5.0
+    timer = maxTime + 0
     textElements[2].text = str(int(math.ceil(timer)))
     
     print(f"\nGame #{gameNum}")
@@ -337,18 +348,28 @@ while running:
             timerPercent = timer / maxTime
 
             # inputs are the locations of all entities
-            inputsToNN = [
-                e.pos.x,
-                e.pos.y,
-                opponent.pos.x,
-                opponent.pos.y,
-                balls[0].pos.x,
-                balls[0].pos.y,
-                # balls[0].angle.degrees,
-                # balls[0].speed,
-                # balls[0].height,
-                timerPercent,
-            ]
+            # blue is reversed to make them symmetric
+
+            if e.team == "red":
+                inputsToNN = [
+                    e.pos.x,
+                    e.pos.y,
+                    opponent.pos.x,
+                    opponent.pos.y,
+                    balls[0].pos.x,
+                    balls[0].pos.y,
+                    timerPercent,
+                ]
+            elif e.team == "blue":
+                inputsToNN = [
+                    1280 - e.pos.x,
+                    e.pos.y,
+                    1280 - opponent.pos.x,
+                    opponent.pos.y,
+                    1280 - balls[0].pos.x,
+                    balls[0].pos.y,
+                    timerPercent,
+                ]
 
             # outputs are the vel [-1, 1]
             outputsfromNN = e.nn.brain(inputsToNN)
@@ -383,13 +404,11 @@ while running:
                     if e.pos.x < ball.pos.x:
                         e.fitness -= (ball.pos.x - e.pos.x) / 640
 
-                # inc / dec fitness based on distance from ball
+                # dec fitness based on distance from ball
                 dist = e.pos.distance(ball.pos)
 
                 if dist > ballDist:
                     e.fitness -= (dist - ballDist) * ballDistMult
-                else:
-                    e.fitness += (ballDist - dist) * ballDistMult
 
                 # kick ball
                 if e.intersects(ball):
@@ -474,11 +493,11 @@ while running:
 
     # timer
 
-    # tick at 60 fps
-    dt = clock.tick(60)
+    # tick at 60 fps time the game speed
+    dt = clock.tick(60 * gameSpeed)
     
     # subtract dt from timer
-    timer -= dt / 1000
+    timer -= dt / (1000 / gameSpeed)
     textElements[2].text = str(int(math.ceil(timer)))
 
     # time up

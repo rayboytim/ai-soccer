@@ -33,7 +33,7 @@ class Player(Entity):
     mutateAmount = 0.2 # amount that weight can be mutated by at once, -mutateAmount to mutateAmount
     mutateChance = 0.1 # percentage of weights to mutate
 
-    ballKickFitnessGain = 200 # fitness gain per ball kick
+    ballKickFitnessGain = 250 # fitness gain per ball kick
     wallPunishment = -1 # fitness loss per frame touching wall
 
     def __init__(self, name: str, team: str):
@@ -63,6 +63,8 @@ class Player(Entity):
 
         # movement
         self.dashCooldown = 0
+
+        self.recentPos = Vector2(0,0) # position from the last frame
 
         # per-game stats
         self.ballKicks = 0
